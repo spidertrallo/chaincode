@@ -10,7 +10,6 @@ import (
 	"math"
 	"math/rand"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
-
 	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -25,10 +24,8 @@ type UTXO struct {
 	Amount int    `json:"amount"`
 }
 
-
-
-
 func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []string, amount int) (*UTXO, error) {
+	ErrNoFarmer= errors.New("The identity should be a farmer to execute the transaction")
 	hasOU, err := cid.HasOUValue(ctx.GetStub(), "client1")
 	if err != nil {
 		return nil, err
@@ -38,17 +35,17 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 	}
 	clientMSPID, err := ctx.GetClientIdentity().GetMSPID()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get MSPID: %v", err)
+		return nil, ErrNoFarmer
 	}
 	if clientMSPID != "farmerMSP" {
-		return nil, fmt.Errorf("client is not authorized to receive new tokens")
+		return nil, ErrNoFarmer
 	}
 
 
 	// Get ID of submitting client identity
 	clientID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get client id: %v", err)
+		return nil, ErrNoFarmer
 	}
 
 	// Validate and summarize utxo inputs
@@ -56,22 +53,22 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 	var totalInputAmount int
 	for _, utxoInputKey := range utxoInputKeys {
 		if utxoInputs[utxoInputKey] != nil {
-			return nil, fmt.Errorf("the same utxo input can not be spend twice")
+			return nil, ErrNoFarmer
 		}
 
 		utxoInputCompositeKey, err := ctx.GetStub().CreateCompositeKey("utxo", []string{clientID, utxoInputKey})
 		if err != nil {
-			return nil, fmt.Errorf("failed to create composite key: %v", err)
+			return nil, ErrNoFarmer
 		}
 
 		// validate that client has a utxo matching the input key
 		valueBytes, err := ctx.GetStub().GetState(utxoInputCompositeKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read utxoInputCompositeKey %s from world state: %v", utxoInputCompositeKey, err)
+			return nil, ErrNoFarmer
 		}
 
 		if valueBytes == nil {
-			return nil, fmt.Errorf("utxoInput %s not found for client %s", utxoInputKey, clientID)
+			return nil, ErrNoFarmer
 		}
 
 		//amount, _ := strconv.Atoi(string(valueBytes)) // Error handling not needed since Itoa() was used when setting the utxo amount, guaranteeing it was an integer.
@@ -90,14 +87,13 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 
 		utxoInputCompositeKey, err := ctx.GetStub().CreateCompositeKey("utxo", []string{utxoInput.Owner, utxoInput.Key})
 		if err != nil {
-			return nil, fmt.Errorf("failed to create composite key: %v", err)
+			return nil, ErrNoFarmer
 		}
 
 		err = ctx.GetStub().DelState(utxoInputCompositeKey)
 		if err != nil {
 			return nil, err
 	}
-	log.Printf("utxoInput deleted: %+v", utxoInput)
 	}
 
 	utxoOutput:=new(UTXO)
@@ -107,15 +103,13 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 	utxoOutput.Amount=totalInputAmount
 	utxoOutputCompositeKey, err := ctx.GetStub().CreateCompositeKey("utxo", []string{utxoOutput.Owner, utxoOutput.Key})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create composite key: %v", err)
+		return nil, ErrNoFarmer
 	}
 
 	err = ctx.GetStub().PutState(utxoOutputCompositeKey, []byte(strconv.Itoa(utxoOutput.Amount)))
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("utxoOutput created: %+v", utxoOutput)
-
 	return utxoOutput, nil
 }
 
@@ -187,8 +181,6 @@ func AfterTransaction(ctx contractapi.TransactionContextInterface) error{
 	_,err=s.Transfer(ctx,[]string{value},cant)
 	return err
 }
-
-
 
 
 var (
