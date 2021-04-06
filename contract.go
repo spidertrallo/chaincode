@@ -1,5 +1,16 @@
 package contracts
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"time"
+	"log"
+
+	"math"
+	"math/rand"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+
 	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
@@ -15,6 +26,18 @@ type UTXO struct {
 }
 
 
+var (
+	ErrOldID                 = errors.New("This PPA's ID already exists")
+	ErrAtraso                = errors.New("This PPA will be considered in default")
+	ErrNumMax                = errors.New("Not on correct period or achieved max number of contracts")
+	ErrWrongPeriod           = errors.New("You are searching in a wrong period")
+	ErrNotAValidFormatClient = errors.New("Client name hasnt a valid format")
+	ErrNoFarmer              = errors.New("The identity should be a farmer to execute the transaction")
+	ErrNoOriginator              = errors.New("The identity should be an originator to execute the transaction")
+	ErrNoSpv=errors.New("The identity should be a SPV to execute the transaction")
+	ErrNoPeriod=errors.New("You are not allowed to write in this period")
+	ErrFarmerPeriod=errors.New("This client has already submit a payment for this period")
+)
 
 func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []string, amount int) (*UTXO, error) {
 	hasOU, err := cid.HasOUValue(ctx.GetStub(), "client1")
