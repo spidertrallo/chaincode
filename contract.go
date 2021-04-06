@@ -25,7 +25,6 @@ type UTXO struct {
 }
 
 func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []string, amount int) (*UTXO, error) {
-	ErrNoFarmer= errors.New("The identity should be a farmer to execute the transaction")
 	hasOU, err := cid.HasOUValue(ctx.GetStub(), "client1")
 	if err != nil {
 		return nil, err
@@ -94,6 +93,7 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 		if err != nil {
 			return nil, err
 	}
+	//log.Printf("utxoInput deleted: %+v", utxoInput)
 	}
 
 	utxoOutput:=new(UTXO)
@@ -110,6 +110,8 @@ func Transfer(ctx contractapi.TransactionContextInterface, utxoInputKeys []strin
 	if err != nil {
 		return nil, err
 	}
+	// log.Printf("utxoOutput created: %+v", utxoOutput)
+
 	return utxoOutput, nil
 }
 
@@ -121,7 +123,7 @@ func ClientUTXOs(ctx contractapi.TransactionContextInterface) ([]string, error) 
 	// Get ID of submitting client identity
 	clientID, err := ctx.GetClientIdentity().GetID()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get client id: %v", err)
+		return nil, ErrNoFarmer
 	}
 
 	// since utxos have a composite key of owner:utxoKey, we can query for all utxos matching owner:*
@@ -146,13 +148,13 @@ func ClientUTXOs(ctx contractapi.TransactionContextInterface) ([]string, error) 
 		}
 
 		if len(compositeKeyParts) != 2 {
-			return nil, fmt.Errorf("expected composite key with two parts (owner:utxoKey)")
+			return nil, ErrNoFarmer
 		}
 
 		utxoKey := compositeKeyParts[1] // owner is at [0], utxoKey is at[1]
 
 		if utxoRecord.Value == nil {
-			return nil, fmt.Errorf("utxo %s has no value", utxoKey)
+			return nil, ErrNoFarmer
 		}
 
 		amount, _ := strconv.Atoi(string(utxoRecord.Value)) // Error handling not needed since Itoa() was used when setting the utxo amount, guaranteeing it was an integer.
@@ -173,10 +175,10 @@ func ClientUTXOs(ctx contractapi.TransactionContextInterface) ([]string, error) 
 func AfterTransaction(ctx contractapi.TransactionContextInterface) error{
 	idUTXO,err:=s.ClientUTXOs(ctx)
 	if err!=nil{
-		return fmt.Errorf("Error: %v",err)
+		return ErrNoFarmer
 	}
 	value:=idUTXO[0]
-	log.Printf("valor de la clave: %v",value)
+	//log.Printf("valor de la clave: %v",value)
 	cant,_:=strconv.Atoi(idUTXO[1])
 	_,err=s.Transfer(ctx,[]string{value},cant)
 	return err
