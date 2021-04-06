@@ -2,13 +2,6 @@ package contracts
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"strconv"
-	"time"
-	"log"
-
-	"math"
-	"math/rand"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	"github.com/hyperledger/fabric-chaincode-go/pkg/cid"
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
